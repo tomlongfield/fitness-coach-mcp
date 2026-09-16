@@ -1,0 +1,15 @@
+# Secrets — never commit this. Copy .env.example instead.
+.env
+examples/opengym/.env
+examples/sparkyfitness/.env
+
+# Dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS/editor cruft
+.DS_Store
+.vscode/

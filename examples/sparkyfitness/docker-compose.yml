@@ -1,0 +1,78 @@
+# Trimmed, illustrative example — NOT the authoritative install method.
+#
+# Installing SparkyFitness itself is out of scope for this project. This
+# file exists only to show the shape of a working setup and, specifically,
+# the one thing that has a knock-on effect on this MCP server: whatever
+# host port `sparkyfitness-frontend` ends up published on
+# (SPARKY_FITNESS_FRONTEND_PORT below) is what you'll point
+# SPARKYFITNESS_BASE_URL at in the MCP server's .env (with a /api suffix)
+# — either directly (if this server is co-located on the same host, see
+# the main README) or via whatever reverse proxy sits in front of it.
+#
+# For the real, current, fully-featured docker-compose.yml (Garmin
+# integration, OIDC, email, file-based secrets, etc.) and full install
+# docs, see SparkyFitness's own repository:
+# https://github.com/CodeWithCJ/SparkyFitness
+
+services:
+  sparkyfitness-db:
+    image: postgres:18.3-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${SPARKY_FITNESS_DB_NAME:?Variable is required and must be set}
+      POSTGRES_USER: ${SPARKY_FITNESS_DB_USER:?Variable is required and must be set}
+      POSTGRES_PASSWORD: ${SPARKY_FITNESS_DB_PASSWORD:-}
+    volumes:
+      - ${DB_PATH:-./postgresql}:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - sparkyfitness-network
+
+  sparkyfitness-server:
+    image: codewithcj/sparkyfitness_server:latest
+    environment:
+      SPARKY_FITNESS_DB_HOST: sparkyfitness-db
+      SPARKY_FITNESS_DB_PORT: 5432
+      SPARKY_FITNESS_DB_NAME: ${SPARKY_FITNESS_DB_NAME:?Variable is required and must be set}
+      SPARKY_FITNESS_DB_USER: ${SPARKY_FITNESS_DB_USER:-sparky}
+      SPARKY_FITNESS_DB_PASSWORD: ${SPARKY_FITNESS_DB_PASSWORD:-}
+      SPARKY_FITNESS_APP_DB_USER: ${SPARKY_FITNESS_APP_DB_USER:-sparkyapp}
+      SPARKY_FITNESS_APP_DB_PASSWORD: ${SPARKY_FITNESS_APP_DB_PASSWORD:-}
+      SPARKY_FITNESS_FRONTEND_URL: ${SPARKY_FITNESS_FRONTEND_URL:?Variable is required and must be set}
+      SPARKY_FITNESS_API_ENCRYPTION_KEY: ${SPARKY_FITNESS_API_ENCRYPTION_KEY:?Variable is required and must be set}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Variable is required and must be set}
+      NODE_ENV: production
+    networks:
+      - sparkyfitness-network
+    restart: always
+    depends_on:
+      sparkyfitness-db:
+        condition: service_healthy
+    volumes:
+      - ${SERVER_BACKUP_PATH:-./backup}:/app/SparkyFitnessServer/backup
+      - ${SERVER_UPLOADS_PATH:-./uploads}:/app/SparkyFitnessServer/uploads
+
+  sparkyfitness-frontend:
+    image: codewithcj/sparkyfitness:latest
+    # This is the port that matters for the MCP server's
+    # SPARKYFITNESS_BASE_URL (add /api).
+    ports:
+      - "${SPARKY_FITNESS_FRONTEND_PORT:-3004}:80"
+    environment:
+      SPARKY_FITNESS_FRONTEND_URL: ${SPARKY_FITNESS_FRONTEND_URL}
+      SPARKY_FITNESS_SERVER_HOST: sparkyfitness-server
+      SPARKY_FITNESS_SERVER_PORT: 3010
+    networks:
+      - sparkyfitness-network
+    restart: always
+    depends_on:
+      - sparkyfitness-server
+
+networks:
+  sparkyfitness-network:
+    driver: bridge
