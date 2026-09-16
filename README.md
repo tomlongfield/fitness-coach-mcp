@@ -1,15 +1,16 @@
 # Fitness coach MCP server
 
 A small, read-only bridge between a self-hosted fitness stack and Claude.
-Exposes four tools over the Model Context Protocol, so Claude can pull live
+Exposes five tools over the Model Context Protocol, so Claude can pull live
 training and nutrition data instead of you pasting it in:
 
 - `get_recent_workouts`, `get_current_routines` — from [openGym](https://github.com/DuarteSantos8/openGym).
-- `get_nutrition_day`, `get_bodyweight_trend` — from [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness)
-  (treated as the authoritative source for body measurements here — openGym
-  does log a bodyweight figure per workout too, but it's manually re-typed
-  rather than synced from a scale, so SparkyFitness's Apple Health/smart-scale
-  sync is preferred instead).
+- `get_nutrition_day`, `get_bodyweight_trend`, `get_sleep_trend` — from
+  [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) (treated as
+  the authoritative source for body measurements here — openGym does log a
+  bodyweight figure per workout too, but it's manually re-typed rather than
+  synced from a scale, so SparkyFitness's Apple Health/smart-scale sync is
+  preferred instead).
 
 It never writes to either service. It holds one openGym bearer token and one
 SparkyFitness API key server-side, and gates access behind a
