@@ -1,13 +1,15 @@
 # Fitness coach MCP server
 
 A small, read-only bridge between a self-hosted fitness stack and Claude.
-Exposes seven tools over the Model Context Protocol, so Claude can pull live
+Exposes eight tools over the Model Context Protocol, so Claude can pull live
 training and nutrition data instead of you pasting it in:
 
 - `get_recent_workouts`, `get_current_routines`, `get_weekly_schedule` — from
-  [openGym](https://github.com/DuarteSantos8/openGym).
+  [openGym](https://github.com/DuarteSantos8/openGym). `get_recent_workouts`
+  includes real `startTime`/`endTime` clock times (not just the date), so it
+  can be compared against `get_activity_sessions` below.
 - `get_nutrition_day`, `get_bodyweight_trend`, `get_sleep_trend`,
-  `get_vitals_trend` — from [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness)
+  `get_vitals_trend`, `get_activity_sessions` — from [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness)
   (treated as the authoritative source for body measurements here — openGym
   does log a bodyweight figure per workout too, but it's manually re-typed
   rather than synced from a scale, so SparkyFitness's Apple Health/smart-scale
@@ -19,7 +21,14 @@ training and nutrition data instead of you pasting it in:
   of what's syncing (SparkyFitness can auto-create dozens of these; check
   `GET /measurements/custom-categories` on your own instance to see what's
   actually available — walking-gait and running-form metrics are commonly
-  synced too but deliberately left out here).
+  synced too but deliberately left out here). `get_activity_sessions`
+  surfaces Apple Watch activity (a run, a bike ride) that openGym has no
+  visibility into at all — since a single gym visit can appear as several
+  adjacent watch-detected segments (e.g. cardio warm-up, then strength, then
+  cardio cool-down) rather than one combined session, it deliberately
+  doesn't try to guess whether an entry here is "the same visit" as an
+  openGym-logged workout — both tools expose real timestamps so that
+  comparison can happen in conversation instead.
 
 It never writes to either service. It holds one openGym bearer token and one
 SparkyFitness API key server-side, and gates access behind a
