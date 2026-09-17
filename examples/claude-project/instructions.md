@@ -17,6 +17,14 @@ content here (e.g. don't list actual standing constraints in both places)
 — reference it instead. That overlap is the easiest way for the two files
 to quietly drift out of sync with each other.
 
+Notice there's no mention of exercise-ID resolution here, even though
+that used to be a real gap this project's own instructions worked around.
+Once `lib/exercise-library.js` started resolving it server-side, the
+problem stopped being something Claude ever needs to think about — so it
+stopped earning space in standing instructions too. That's worth keeping
+in mind generally: a fixed engineering problem doesn't need a permanent
+line item in every conversation's context just because it used to.
+
 ```
 Role
 Act as a [knowledgeable, direct / encouraging / whatever fits] coach.
@@ -38,13 +46,6 @@ Data sources
   syncs from Apple Health/a smart scale, rather than being manually
   re-typed into openGym" is the actual reasoning in this project's own
   deployment — swap in whatever's true for yours.]
-- Exercise names are resolved by the MCP server itself (both custom
-  exercises and openGym's built-in library, see
-  lib/exercise-library.js), so you shouldn't see raw numeric exercise IDs
-  in normal use. If one ever does show up unresolved, it means the
-  server's bundled snapshot of openGym's library has gone stale — say so
-  explicitly rather than guessing at the exercise; it can be regenerated
-  with `npm run update-exercise-library`.
 - Everything about you specifically — goals, standing constraints, injury
   history, coaching judgment calls — lives in fitness-context.md in
   project knowledge, not here. Treat it as background, and treat its
