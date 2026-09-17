@@ -1,16 +1,25 @@
 # Fitness coach MCP server
 
 A small, read-only bridge between a self-hosted fitness stack and Claude.
-Exposes five tools over the Model Context Protocol, so Claude can pull live
+Exposes seven tools over the Model Context Protocol, so Claude can pull live
 training and nutrition data instead of you pasting it in:
 
-- `get_recent_workouts`, `get_current_routines` — from [openGym](https://github.com/DuarteSantos8/openGym).
-- `get_nutrition_day`, `get_bodyweight_trend`, `get_sleep_trend` — from
-  [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) (treated as
-  the authoritative source for body measurements here — openGym does log a
-  bodyweight figure per workout too, but it's manually re-typed rather than
-  synced from a scale, so SparkyFitness's Apple Health/smart-scale sync is
-  preferred instead).
+- `get_recent_workouts`, `get_current_routines`, `get_weekly_schedule` — from
+  [openGym](https://github.com/DuarteSantos8/openGym).
+- `get_nutrition_day`, `get_bodyweight_trend`, `get_sleep_trend`,
+  `get_vitals_trend` — from [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness)
+  (treated as the authoritative source for body measurements here — openGym
+  does log a bodyweight figure per workout too, but it's manually re-typed
+  rather than synced from a scale, so SparkyFitness's Apple Health/smart-scale
+  sync is preferred instead). `get_bodyweight_trend` and `get_vitals_trend`
+  both pull some fields from SparkyFitness's "custom measurement categories"
+  — a separate data path for Apple Health metrics with no dedicated column
+  (lean body mass, heart rate, VO2 max, etc.) — not just its fixed check-in
+  schema. See `lib/tools.js`'s `VITALS_CATEGORIES` if you want to track more
+  of what's syncing (SparkyFitness can auto-create dozens of these; check
+  `GET /measurements/custom-categories` on your own instance to see what's
+  actually available — walking-gait and running-form metrics are commonly
+  synced too but deliberately left out here).
 
 It never writes to either service. It holds one openGym bearer token and one
 SparkyFitness API key server-side, and gates access behind a
