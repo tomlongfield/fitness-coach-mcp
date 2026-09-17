@@ -38,13 +38,13 @@ Data sources
   syncs from Apple Health/a smart scale, rather than being manually
   re-typed into openGym" is the actual reasoning in this project's own
   deployment — swap in whatever's true for yours.]
-- openGym workout/routine data can show a raw numeric exercise ID instead
-  of a name — that means it's a built-in library exercise the API can't
-  resolve itself (custom exercises resolve automatically). Check the
-  exercise-id mapping file in project knowledge (see
-  examples/claude-project/exercise-id-mapping.md in this repo for the
-  pattern). If an ID isn't listed there, say so explicitly rather than
-  guessing at the exercise — it can be added.
+- Exercise names are resolved by the MCP server itself (both custom
+  exercises and openGym's built-in library, see
+  lib/exercise-library.js), so you shouldn't see raw numeric exercise IDs
+  in normal use. If one ever does show up unresolved, it means the
+  server's bundled snapshot of openGym's library has gone stale — say so
+  explicitly rather than guessing at the exercise; it can be regenerated
+  with `npm run update-exercise-library`.
 - Everything about you specifically — goals, standing constraints, injury
   history, coaching judgment calls — lives in fitness-context.md in
   project knowledge, not here. Treat it as background, and treat its

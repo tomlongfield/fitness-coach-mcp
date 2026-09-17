@@ -274,25 +274,26 @@ year, refreshed automatically).
 
 The connector alone gives Claude live numbers, but nothing that lives
 outside either API — injury history, standing goals, coaching judgment
-calls, how to interpret a raw exercise ID it can't otherwise resolve. A
-[Claude Project](https://support.claude.com/en/articles/9517075-what-are-projects)
-with custom instructions and a couple of knowledge files fills that gap.
-`examples/claude-project/` has three loose templates to start from:
+calls. A [Claude Project](https://support.claude.com/en/articles/9517075-what-are-projects)
+with custom instructions and a knowledge file fills that gap.
+`examples/claude-project/` has two loose templates to start from:
 
 - `instructions.md` — a project custom-instructions template: splits what's
-  live (connector tools) from what's background (knowledge files), and
+  live (connector tools) from what's background (knowledge file), and
   says explicitly which tool covers which data.
 - `fitness-context.md` — a **very** loose structural example of a knowledge
   file, with every value replaced by a placeholder — the point is the
   shape (what belongs in "standing constraints" vs. "current status" vs.
   what should just be a live connector call instead of a hardcoded
   number), not the content.
-- `exercise-id-mapping.md` — a small worked example of the built-in
-  exercise ID table mentioned in `instructions.md`, plus notes on why to
-  keep it scoped to your own used IDs rather than the whole ~1,300-entry
-  library.
 
-None of these are meant to be used verbatim — replace every placeholder
+(An earlier version of this project resolved built-in exercise IDs via a
+lookup table kept in Claude's project knowledge. That's no longer
+necessary — `lib/exercise-library.js` resolves them server-side now, at
+no ongoing context cost to Claude. See `npm run update-exercise-library`
+if a raw ID ever shows up unresolved.)
+
+Neither template is meant to be used verbatim — replace every placeholder
 with your own actual context.
 
 ## What's deliberately left out

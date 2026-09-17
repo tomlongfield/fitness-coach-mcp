@@ -1,11 +1,12 @@
 {
   "name": "fitness-coach-mcp",
   "version": "1.0.0",
-  "description": "Read-only remote MCP server exposing openGym (workouts, routines) and SparkyFitness (nutrition, water, body measurements) data to Claude.",
+  "description": "Read-only remote MCP server exposing openGym (workouts, routines) and SparkyFitness (nutrition, water, body measurements, sleep) data to Claude.",
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "update-exercise-library": "node scripts/update-exercise-library.mjs"
   },
   "engines": {
     "node": ">=18.17"
