@@ -6,14 +6,19 @@ training and nutrition data instead of you pasting it in:
 
 - `get_recent_workouts`, `get_exercise_history`, `get_current_routines`,
   `get_weekly_schedule` — from [openGym](https://github.com/DuarteSantos8/openGym).
-  `get_recent_workouts` includes real `startTime`/`endTime` clock times (not
-  just the date), so it can be compared against `get_activity_sessions`
-  below, plus reconstructed PR detail (type — weight/reps/volume/first —
-  and the previous value each beat; openGym itself only exposes a bare
-  pass/fail flag with no detail) and `watchStrengthDurationMin` where a
-  same-day watch session exists. `get_exercise_history` tracks a single
-  exercise's progression (top set, estimated 1RM, volume) across sessions
-  without hauling every exercise in every workout to get it.
+  `get_recent_workouts` includes each workout's own `id` (for
+  cross-referencing `get_activity_sessions`' `matchedWorkoutId` and
+  `get_exercise_history`'s `workoutId`) and real `startTime`/`endTime` clock
+  times (not just the date), so it can be compared against
+  `get_activity_sessions` below, plus reconstructed PR detail (type —
+  weight/reps/volume/first — and the previous value each beat; openGym
+  itself only exposes a bare pass/fail flag with no detail) and
+  `watchStrengthDurationMin` where a same-day watch session exists.
+  `get_exercise_history` tracks a single exercise's progression (top set,
+  estimated 1RM, volume) across sessions without hauling every exercise in
+  every workout to get it — `estimated1RM` is a derived Epley-formula index
+  for tracking direction, not a measurement; trust the trend, not the
+  absolute number.
 - `get_nutrition_day`, `get_nutrition_trend`, `get_bodyweight_trend`,
   `get_sleep_trend`, `get_vitals_trend`, `get_activity_sessions` — from
   [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) (treated as
@@ -22,7 +27,10 @@ training and nutrition data instead of you pasting it in:
   synced from a scale, so SparkyFitness's Apple Health/smart-scale sync is
   preferred instead). `get_nutrition_trend` gives per-day calorie/macro/water
   totals across a window instead of calling `get_nutrition_day` once per
-  day. `get_bodyweight_trend` and `get_vitals_trend` both pull some fields
+  day — unlogged days return `null` macros rather than `0` (absent isn't
+  the same as a fast), and today is excluded from the averages
+  (`partial: true`) since a day in progress otherwise skews every macro
+  low. `get_bodyweight_trend` and `get_vitals_trend` both pull some fields
   from SparkyFitness's "custom measurement categories" — a separate data
   path for Apple Health metrics with no dedicated column (lean body mass,
   heart rate, VO2 max, etc.) — not just its fixed check-in schema. See
@@ -31,10 +39,13 @@ training and nutrition data instead of you pasting it in:
   `GET /measurements/custom-categories` on your own instance to see what's
   actually available — walking-gait and running-form metrics are commonly
   synced too but deliberately left out here). `get_bodyweight_trend`'s
-  `appleBasalEnergyKcal` is Apple Health's accumulated basal-energy figure
-  (NOT basal metabolic rate — it only covers however long the Watch was
-  actually worn that day) with a `watchWearCompletenessPct` alongside it, so
-  a low reading reads as an undercount rather than a real metabolic dip.
+  `appleBasalEnergyKcal` is Apple Health's accumulated basal-energy figure,
+  NOT basal metabolic rate — see its in-code note for why its daily swing
+  is a documented Apple sync bug, not a usable wear-time signal (an earlier
+  version of this connector tried to derive one from it and that was
+  removed as unsound). `get_vitals_trend` doesn't flag or filter values for
+  plausibility either, for the same reason: judging what's a "real" reading
+  needs context (schedule, diary, history) this connector doesn't have.
   `get_activity_sessions` surfaces Apple Watch activity (a run, a bike ride)
   that openGym has no visibility into at all, with a server-side
   `matchedWorkoutId` linking a session to the same-date openGym workout when
