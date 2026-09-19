@@ -1,34 +1,47 @@
 # Fitness coach MCP server
 
 A small, read-only bridge between a self-hosted fitness stack and Claude.
-Exposes eight tools over the Model Context Protocol, so Claude can pull live
+Exposes ten tools over the Model Context Protocol, so Claude can pull live
 training and nutrition data instead of you pasting it in:
 
-- `get_recent_workouts`, `get_current_routines`, `get_weekly_schedule` — from
-  [openGym](https://github.com/DuarteSantos8/openGym). `get_recent_workouts`
-  includes real `startTime`/`endTime` clock times (not just the date), so it
-  can be compared against `get_activity_sessions` below.
-- `get_nutrition_day`, `get_bodyweight_trend`, `get_sleep_trend`,
-  `get_vitals_trend`, `get_activity_sessions` — from [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness)
-  (treated as the authoritative source for body measurements here — openGym
-  does log a bodyweight figure per workout too, but it's manually re-typed
-  rather than synced from a scale, so SparkyFitness's Apple Health/smart-scale
-  sync is preferred instead). `get_bodyweight_trend` and `get_vitals_trend`
-  both pull some fields from SparkyFitness's "custom measurement categories"
-  — a separate data path for Apple Health metrics with no dedicated column
-  (lean body mass, heart rate, VO2 max, etc.) — not just its fixed check-in
-  schema. See `lib/tools.js`'s `VITALS_CATEGORIES` if you want to track more
-  of what's syncing (SparkyFitness can auto-create dozens of these; check
+- `get_recent_workouts`, `get_exercise_history`, `get_current_routines`,
+  `get_weekly_schedule` — from [openGym](https://github.com/DuarteSantos8/openGym).
+  `get_recent_workouts` includes real `startTime`/`endTime` clock times (not
+  just the date), so it can be compared against `get_activity_sessions`
+  below, plus reconstructed PR detail (type — weight/reps/volume/first —
+  and the previous value each beat; openGym itself only exposes a bare
+  pass/fail flag with no detail) and `watchStrengthDurationMin` where a
+  same-day watch session exists. `get_exercise_history` tracks a single
+  exercise's progression (top set, estimated 1RM, volume) across sessions
+  without hauling every exercise in every workout to get it.
+- `get_nutrition_day`, `get_nutrition_trend`, `get_bodyweight_trend`,
+  `get_sleep_trend`, `get_vitals_trend`, `get_activity_sessions` — from
+  [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) (treated as
+  the authoritative source for body measurements here — openGym does log a
+  bodyweight figure per workout too, but it's manually re-typed rather than
+  synced from a scale, so SparkyFitness's Apple Health/smart-scale sync is
+  preferred instead). `get_nutrition_trend` gives per-day calorie/macro/water
+  totals across a window instead of calling `get_nutrition_day` once per
+  day. `get_bodyweight_trend` and `get_vitals_trend` both pull some fields
+  from SparkyFitness's "custom measurement categories" — a separate data
+  path for Apple Health metrics with no dedicated column (lean body mass,
+  heart rate, VO2 max, etc.) — not just its fixed check-in schema. See
+  `lib/tools.js`'s `VITALS_CATEGORIES` if you want to track more of what's
+  syncing (SparkyFitness can auto-create dozens of these; check
   `GET /measurements/custom-categories` on your own instance to see what's
   actually available — walking-gait and running-form metrics are commonly
-  synced too but deliberately left out here). `get_activity_sessions`
-  surfaces Apple Watch activity (a run, a bike ride) that openGym has no
-  visibility into at all — since a single gym visit can appear as several
-  adjacent watch-detected segments (e.g. cardio warm-up, then strength, then
-  cardio cool-down) rather than one combined session, it deliberately
-  doesn't try to guess whether an entry here is "the same visit" as an
-  openGym-logged workout — both tools expose real timestamps so that
-  comparison can happen in conversation instead.
+  synced too but deliberately left out here). `get_bodyweight_trend`'s
+  `appleBasalEnergyKcal` is Apple Health's accumulated basal-energy figure
+  (NOT basal metabolic rate — it only covers however long the Watch was
+  actually worn that day) with a `watchWearCompletenessPct` alongside it, so
+  a low reading reads as an undercount rather than a real metabolic dip.
+  `get_activity_sessions` surfaces Apple Watch activity (a run, a bike ride)
+  that openGym has no visibility into at all, with a server-side
+  `matchedWorkoutId` linking a session to the same-date openGym workout when
+  one exists — since a single gym visit can appear as several adjacent
+  watch-detected segments (e.g. cardio warm-up, then strength, then cardio
+  cool-down) rather than one combined session, it's a same-date link, not a
+  claim that segments were merged.
 
 It never writes to either service. It holds one openGym bearer token and one
 SparkyFitness API key server-side, and gates access behind a
@@ -110,7 +123,11 @@ node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"  
 Use the two generated values for `MCP_PASSWORD` and `TOKEN_SECRET`. Fill in
 `OPENGYM_BASE_URL`, `OPENGYM_BEARER_TOKEN`, `SPARKYFITNESS_BASE_URL`,
 `SPARKYFITNESS_API_KEY`, and `PUBLIC_URL` (the externally reachable HTTPS
-URL you'll serve `/mcp` at — see step 5).
+URL you'll serve `/mcp` at — see step 5). Also set `TIMEZONE` to your own
+IANA zone (e.g. `Europe/London`) — it defaults to UTC, and every tool that
+resolves "today" (`get_nutrition_day` with no date given, the lookback
+window on the trend tools) will resolve the wrong calendar date near your
+local midnight if left unset in any timezone ahead of UTC.
 
 **The knock-on-effect note, in full:** if this server runs on the same host
 as openGym and/or SparkyFitness, point `OPENGYM_BASE_URL` /
