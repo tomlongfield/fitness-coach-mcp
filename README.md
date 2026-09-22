@@ -303,6 +303,30 @@ location / {
 }
 ```
 
+### Optional: exposing the connector's icon
+
+This server serves a favicon/icon (`/favicon.ico`, `/icon.svg`,
+`/icon-512.png`, `/apple-touch-icon.png` — see `public/`) unauthenticated,
+on purpose. Claude currently resolves a custom connector's icon via a
+favicon lookup against this server's domain, done by infrastructure that
+isn't Anthropic's own backend and isn't your browser — so if you restricted
+`/` above, these specific paths need their own open location carved out
+ahead of it, the same way `/authorize` does:
+
+```nginx
+location ~ ^/(favicon\.ico|icon\.svg|icon-512\.png|apple-touch-icon\.png)$ {
+    proxy_pass http://127.0.0.1:8787;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+These are static branding images only — nothing in `public/` ever contains
+account data — so leaving them world-readable isn't a meaningful exposure.
+If you don't care about the connector icon showing correctly, skip this;
+everything else works identically either way.
+
 ### Optional: HRV
 
 `get_hrv_samples` returns raw HRV readings if you feed them in — Apple
