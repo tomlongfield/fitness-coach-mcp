@@ -2,6 +2,7 @@ import express from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { config } from './lib/config.js';
 import { registerOAuthRoutes, requireAuth } from './lib/oauth.js';
+import { registerHealthRelayRoutes } from './lib/health-relay.js';
 import { buildServer } from './lib/tools.js';
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 registerOAuthRoutes(app);
+registerHealthRelayRoutes(app);
 
 // --- The MCP endpoint itself -------------------------------------------------
 // Stateless: a brand-new McpServer + transport per request, never reused.

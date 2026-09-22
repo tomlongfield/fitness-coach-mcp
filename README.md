@@ -33,7 +33,7 @@ training and nutrition data instead of you pasting it in:
   low. `get_bodyweight_trend` and `get_vitals_trend` both pull some fields
   from SparkyFitness's "custom measurement categories" — a separate data
   path for Apple Health metrics with no dedicated column (lean body mass,
-  heart rate, VO2 max, etc.) — not just its fixed check-in schema. See
+  heart rate, VO2 max, HRV, etc.) — not just its fixed check-in schema. See
   `lib/tools.js`'s `VITALS_CATEGORIES` if you want to track more of what's
   syncing (SparkyFitness can auto-create dozens of these; check
   `GET /measurements/custom-categories` on your own instance to see what's
@@ -281,6 +281,50 @@ location / {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 ```
+
+### Optional: HRV via Health Auto Export
+
+`get_vitals_trend` includes heart rate variability (`hrvSdnnMs`) if you feed
+it in — Apple Health has HRV, but nothing syncs it to SparkyFitness on its
+own. The path that works:
+
+[Health Auto Export](https://apps.apple.com/app/health-auto-export/id1115567069)
+(iOS, App Store) → `POST /health-relay/hrv` on this server → SparkyFitness's
+`/api/health-data`. A relay is required, not optional — Health Auto Export's
+export shape (`{data: {metrics: [...]}}`) and SparkyFitness's ingest shape
+(`{value, type, date}`) don't overlap at all, confirmed against both
+systems' real source. `lib/health-relay.js` reshapes one into the other,
+averaging same-day samples into one daily value (matching every other trend
+tool in this connector) and posting under the category name `HRV_SDNN` —
+case-sensitive, and specifically *not* `HRV` alone, which SparkyFitness
+treats as a separate RMSSD-based category. Apple Health only ever measures
+SDNN.
+
+1. Set `HEALTH_RELAY_SECRET` in `.env` (same generation command as
+   `MCP_PASSWORD`) — the route 503s if it's unset.
+2. Add a narrower nginx location than the rest of this server — full example
+   in `examples/nginx/mcp-server.conf`. This route has no reason to be
+   reachable from Anthropic's range, only from wherever your phone can reach
+   it (e.g. a VPN CIDR, matching `/authorize`'s scope above, not the wider
+   `/` block).
+3. In Health Auto Export, add a REST API automation: URL
+   `https://your-domain/health-relay/hrv`, a header
+   `X-Relay-Secret: <your HEALTH_RELAY_SECRET>`, JSON format, Heart Rate
+   Variability enabled as a metric.
+4. Trigger one manual export with `?debug=1&dryRun=1` appended to the URL
+   first (edit the automation's URL temporarily) — this logs the raw metric
+   payload and returns what *would* be posted without writing anything, so
+   you can confirm the field-name guesses in `lib/health-relay.js` actually
+   match your export before trusting it unattended. Health Auto Export's own
+   docs don't commit to one field-naming convention, so this connector
+   guesses a few common ones (`qty`, `Avg`, `value`) rather than assuming.
+   Drop the query params once confirmed.
+
+`hrvSdnnMs` is inherently noisy day to day (many samples/day, affected by
+posture, activity, time since eating) and a new account starts with no
+established personal baseline — treat it as a multi-week trend against
+itself, not a meaningful single-day figure (see `get_vitals_trend`'s tool
+description, which carries the same caveat for the model reading it).
 
 ## 6. Run it under a process supervisor
 
