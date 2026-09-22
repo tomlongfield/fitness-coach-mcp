@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "update-exercise-library": "node scripts/update-exercise-library.mjs"
+    "update-exercise-library": "node scripts/update-exercise-library.mjs",
+    "build-favicon": "node scripts/build-favicon-ico.mjs"
   },
   "engines": {
     "node": ">=18.17"

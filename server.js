@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { config } from './lib/config.js';
 import { registerOAuthRoutes, requireAuth } from './lib/oauth.js';
@@ -11,6 +13,13 @@ app.set('trust proxy', true); // we sit behind nginx/caddy; needed for req.ip in
 // DCR (/register) uses JSON; the token endpoint uses form-urlencoded (RFC 6749).
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Branding assets only (favicon/icon) — no auth, deliberately: the whole
+// point is for Claude's own connector-icon lookup (and any browser showing
+// the login page) to be able to fetch these from outside this server's
+// normal IP allowlist. See README's reverse-proxy section for the matching
+// nginx location block this needs alongside /authorize and /health-relay/.
+app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'public'), { maxAge: '7d' }));
 
 registerOAuthRoutes(app);
 registerHealthRelayRoutes(app);
