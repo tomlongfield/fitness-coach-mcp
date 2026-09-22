@@ -44,6 +44,6 @@ app.delete(config.mcpPath, requireAuth, (req, res) => res.status(405).json({ err
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
 app.listen(config.port, () => {
-  console.log(`openGym MCP server listening on :${config.port}`);
+  console.log(`Fitness coach MCP server listening on :${config.port}`);
   console.log(`MCP endpoint (public): ${config.mcpUrl}`);
 });
