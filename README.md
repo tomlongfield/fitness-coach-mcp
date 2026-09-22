@@ -188,6 +188,21 @@ Claude Code's and MCP Inspector's loopback OAuth callback conventions
 different MCP client using a different loopback path would need adding
 there — see `isAllowedRedirect` in `lib/config.js`.
 
+## Optional: local extensions
+
+If you track a fitness-relevant data source this template doesn't cover —
+a journal app, a second tracker, whatever — you can add it as a tool
+without forking this repo. Any file you drop in `lib/tools/local/` that
+exports a `registerSomethingTools(server)` function is picked up
+automatically at startup, the same convention every built-in domain module
+under `lib/tools/` already follows.
+
+That whole directory (except its own README) is gitignored, on purpose: a
+local extension's source lives elsewhere (a private repo, or just the file
+on your server), never in a commit to this public template, and `git pull`
+here never conflicts with it. See `lib/tools/local/README.md` for the
+pattern and a minimal example.
+
 ## 5. Put it behind a reverse proxy
 
 Two common patterns, depending on whether you're sharing a domain with

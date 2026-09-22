@@ -3,6 +3,11 @@
 examples/opengym/.env
 examples/sparkyfitness/.env
 
+# Local extensions (see lib/tools/local/README.md) — private, per-deployment
+# tool modules that never belong in this public template.
+lib/tools/local/*
+!lib/tools/local/README.md
+
 # Dependencies
 node_modules/
 
