@@ -42,23 +42,24 @@ for (let i = jsonStart; i < raw.length; i++) {
 if (jsonEnd === -1) throw new Error('Could not find end of EXDB array in source file');
 
 const exercises = JSON.parse(raw.slice(jsonStart, jsonEnd));
-const idToName = Object.fromEntries(exercises.map((e) => [e.id, e.n]));
+const idToInfo = Object.fromEntries(exercises.map((e) => [e.id, { n: e.n, bp: e.bp }]));
 const today = new Date().toISOString().slice(0, 10);
 
-const output = `// Snapshot of openGym's built-in exercise library (id -> name only), so
-// this server can resolve exerciseId -> exerciseName for built-in exercises
-// itself, without needing a lookup file maintained on the Claude side.
+const output = `// Snapshot of openGym's built-in exercise library (id -> name + body part),
+// so this server can resolve exerciseId -> exerciseName/bodyPart for
+// built-in exercises itself, without needing a lookup file maintained on
+// the Claude side.
 //
 // Source: DuarteSantos8/openGym, frontend/src/lib/exercises-data.js (EXDB).
 // The metadata/names in that dataset are MIT-licensed (images/GIFs are
 // separately licensed and are not included here — see openGym's NOTICE.md).
 //
-// This is a point-in-time snapshot (${today}, ${Object.keys(idToName).length}
+// This is a point-in-time snapshot (${today}, ${Object.keys(idToInfo).length}
 // entries) of openGym's own library, not a live API — it goes stale if
 // openGym adds new built-in exercises after this date. Regenerate with:
 // node scripts/update-exercise-library.mjs
-export const EXERCISE_LIBRARY = ${JSON.stringify(idToName)};
+export const EXERCISE_LIBRARY = ${JSON.stringify(idToInfo)};
 `;
 
 fs.writeFileSync(OUT_PATH, output);
-console.log(`Wrote ${Object.keys(idToName).length} exercises to ${OUT_PATH}`);
+console.log(`Wrote ${Object.keys(idToInfo).length} exercises to ${OUT_PATH}`);
