@@ -1,7 +1,7 @@
 # Fitness coach MCP server
 
 A small, read-only bridge between a self-hosted fitness stack and Claude.
-Exposes eleven tools over the Model Context Protocol, so Claude can pull live
+Exposes seventeen tools over the Model Context Protocol, so Claude can pull live
 training and nutrition data instead of you pasting it in:
 
 - `get_recent_workouts`, `get_exercise_history`, `get_current_routines`,
@@ -19,6 +19,27 @@ training and nutrition data instead of you pasting it in:
   every workout to get it — `estimated1RM` is a derived Epley-formula index
   for tracking direction, not a measurement; trust the trend, not the
   absolute number.
+- `get_weekly_schedule`, `preview_next_session`, `get_muscle_volume`,
+  `get_structural_balance` — openGym's own answers, computed with openGym's
+  own code: a copy of the relevant part of its frontend logic
+  (`frontend/src/lib/`) is kept under `lib/vendor/opengym/`, pinned to a
+  release tag. So the schedule follows the app's rotation mode (sessions
+  A, B, C… done in order on whatever days you train) and one-off day
+  overrides, not just the fixed weekday plan. The preview shows the
+  weight and reps the app will actually open with once its progression
+  policy has had its say, not the routine's stored target. Muscle volume
+  is the Stats screen's "planned vs completed" effective sets per muscle,
+  and structural balance is its Poliquin/Thibaudeau/ATG lift-ratio check.
+  After upgrading openGym, run `npm run update-opengym-vendor` (edit
+  `VENDOR_TAG` in the script first) to re-sync it.
+- `get_workout_photos` — photos attached to openGym workouts (progress
+  photos), returned as images, fetched from openGym's `/api/media/` only
+  when called. Videos come back as their poster frame.
+- Across the openGym tools, volume and top sets count work sets only:
+  warm-up sets are left out, drop-set drops are included, and unilateral
+  sets logged per side are read one side at a time, the same as openGym's
+  own Stats. Sessions marked "Don't count for progression" are flagged,
+  and `get_lift_progression_summary` leaves them out.
 - `get_nutrition_day`, `get_nutrition_trend`, `get_bodyweight_trend`,
   `get_sleep_trend`, `get_vitals_trend`, `get_activity_sessions` — from
   [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) (treated as
@@ -477,8 +498,8 @@ with your own actual context.
   either service. If you want that later, it's a new tool plus a new scope
   to think about for whichever API — not a small addition.
 - **No SparkyFitness measurement data other than body/food/water.** No
-  progress photos (not a good fit for a JSON tool response, and more
-  sensitive data than the value justifies) and no exercise sessions
+  SparkyFitness progress photos (openGym's workout photos are exposed, via
+  `get_workout_photos`, and only when that tool is called) and no exercise sessions
   (openGym already covers workouts; SparkyFitness's own exercise entries
   would just be a second, redundant source).
 - **No persistence beyond signed tokens.** Registered OAuth clients and
@@ -515,4 +536,6 @@ with your own actual context.
 
 ## License
 
-MIT — see `LICENSE`.
+AGPL-3.0-or-later (see `LICENSE`). `lib/vendor/opengym/` is copied from
+[openGym](https://github.com/DuarteSantos8/openGym), which is AGPL-3.0-or-later,
+so this repo is licensed the same way.

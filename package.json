@@ -4,13 +4,15 @@
   "description": "Read-only remote MCP server exposing openGym (workouts, routines) and SparkyFitness (nutrition, water, body measurements, sleep) data to Claude.",
   "type": "module",
   "main": "server.js",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "node server.js",
     "update-exercise-library": "node scripts/update-exercise-library.mjs",
-    "build-favicon": "node scripts/build-favicon-ico.mjs"
+    "build-favicon": "node scripts/build-favicon-ico.mjs",
+    "update-opengym-vendor": "node scripts/update-opengym-vendor.mjs"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20.10"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
