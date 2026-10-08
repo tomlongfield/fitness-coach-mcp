@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { config } from './lib/config.js';
 import { registerOAuthRoutes, requireAuth } from './lib/oauth.js';
-import { registerHealthRelayRoutes } from './lib/health-relay.js';
 import { buildServer } from './lib/tools.js';
 
 const app = express();
@@ -18,11 +17,10 @@ app.use(express.urlencoded({ extended: false }));
 // point is for Claude's own connector-icon lookup (and any browser showing
 // the login page) to be able to fetch these from outside this server's
 // normal IP allowlist. See README's reverse-proxy section for the matching
-// nginx location block this needs alongside /authorize and /health-relay/.
+// nginx location block this needs alongside /authorize.
 app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'public'), { maxAge: '7d' }));
 
 registerOAuthRoutes(app);
-registerHealthRelayRoutes(app);
 
 // --- The MCP endpoint itself -------------------------------------------------
 // Stateless: a brand-new McpServer + transport per request, never reused.

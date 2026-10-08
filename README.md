@@ -1,7 +1,7 @@
 # Fitness coach MCP server
 
 A small, read-only bridge between a self-hosted fitness stack and Claude.
-Exposes eighteen tools over the Model Context Protocol, so Claude can pull live
+Exposes seventeen tools over the Model Context Protocol, so Claude can pull live
 training and nutrition data instead of you pasting it in:
 
 - `get_recent_workouts`, `get_exercise_history`, `get_current_routines`,
@@ -57,7 +57,7 @@ training and nutrition data instead of you pasting it in:
   from SparkyFitness's "custom measurement categories" — a separate data
   path for Apple Health metrics with no dedicated column (lean body mass,
   heart rate, VO2 max, HRV, etc.) — not just its fixed check-in schema. See
-  `lib/tools.js`'s `VITALS_CATEGORIES` if you want to track more of what's
+  `lib/tools/vitals.js`'s `VITALS_CATEGORIES` if you want to track more of what's
   syncing (SparkyFitness can auto-create dozens of these; check
   `GET /measurements/custom-categories` on your own instance to see what's
   actually available — walking-gait and running-form metrics are commonly
@@ -69,6 +69,9 @@ training and nutrition data instead of you pasting it in:
   removed as unsound). `get_vitals_trend` doesn't flag or filter values for
   plausibility either, for the same reason: judging what's a "real" reading
   needs context (schedule, diary, history) this connector doesn't have.
+  HRV (SDNN) is in `get_vitals_trend` and `get_daily_summary` as a daily
+  min/max/average — what the SparkyFitness iOS app syncs from Apple Health
+  once its Heart Rate Variability metric is switched on.
   `get_activity_sessions` surfaces Apple Watch activity (a run, a bike ride)
   that openGym has no visibility into at all, with a server-side
   `matchedWorkoutId` linking a session to the same-date openGym workout when
@@ -76,12 +79,6 @@ training and nutrition data instead of you pasting it in:
   watch-detected segments (e.g. cardio warm-up, then strength, then cardio
   cool-down) rather than one combined session, it's a same-date link, not a
   claim that segments were merged.
-- `get_hrv_samples` — raw heart rate variability readings (SDNN, ms), one
-  entry per actual measurement rather than one per day like everything else
-  above; HRV is logged several times a day, and a daily average would blend
-  together readings from very different contexts (asleep vs. mid-workday
-  stress) into a number that means less than either alone. Not a first-party
-  sync — see "Optional: HRV" below for how this data actually gets in.
 
 It never writes to either service. It holds one openGym bearer token and one
 SparkyFitness API key server-side, and gates access behind a
@@ -349,90 +346,6 @@ These are static branding images only — nothing in `public/` ever contains
 account data — so leaving them world-readable isn't a meaningful exposure.
 If you don't care about the connector icon showing correctly, skip this;
 everything else works identically either way.
-
-### Optional: HRV
-
-`get_hrv_samples` returns raw HRV readings if you feed them in — Apple
-Health has HRV, but nothing syncs it to SparkyFitness on its own, and
-automated export to a custom endpoint turned out to be a paid feature in
-every third-party app checked (Health Auto Export, Health Export Pro,
-others). The free route: an **Apple Shortcuts** automation you build
-yourself, posting straight to this server's relay. (Health Auto Export also
-works with the same relay if you'd rather pay for the polished UI — see the
-note at the end of this section.)
-
-**1. One-time SparkyFitness setup.** Posting HRV auto-creates a custom
-measurement category, but SparkyFitness defaults a new category to
-`frequency: "Daily"` — one entry per day, silently overwritten by the next
-post that day. HRV needs every reading kept, not just the last one each
-day, so switch it to `"All"` (unlimited entries — verified live: multiple
-same-hour readings each stored as their own row, not collapsed) right after
-the *first* real post ever reaches it (the category has to exist first):
-
-```bash
-# find the category's id
-curl -s -H "Authorization: Bearer $SPARKYFITNESS_API_KEY" \
-  "$SPARKYFITNESS_BASE_URL/measurements/custom-categories" | grep -A1 HRV_SDNN
-
-# then, using that id:
-curl -s -X PUT "$SPARKYFITNESS_BASE_URL/measurements/custom-categories/<id>" \
-  -H "Authorization: Bearer $SPARKYFITNESS_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"frequency":"All"}'
-```
-
-**2. Set `HEALTH_RELAY_SECRET`** in `.env` (same generation command as
-`MCP_PASSWORD`) — the route 503s if it's unset. This is a separate,
-narrowly-scoped credential from `SPARKYFITNESS_API_KEY` on purpose: it's
-write-only and HRV-only, so it's the one that ends up stored on your phone,
-not the API key that can read everything.
-
-**3. Add a narrower nginx location** than the rest of this server — full
-example in `examples/nginx/mcp-server.conf`. This route has no reason to be
-reachable from Anthropic's range, only from wherever your phone can reach
-it (e.g. a VPN CIDR, matching `/authorize`'s scope above, not the wider `/`
-block).
-
-**4. Build the Shortcut** (Shortcuts app → Automation → + → Personal
-Automation → Time of Day, e.g. once daily in the evening):
-
-- **Find Health Samples** — Sample Type: Heart Rate Variability, filtered
-  to the period you want to sync (e.g. today).
-- **Repeat with Each** result:
-  - **Get Details of Health Sample** → Value, and → Start Date
-  - **Format Date** (Start Date) → ISO 8601
-  - **Dictionary**: `{"value": <Value>, "timestamp": <formatted date>}`
-  - **Add to Variable** (a list, initialized empty before the loop) — build
-    up one entry per reading, not an average
-- **Get Contents of URL**:
-  - URL: `https://your-domain/health-relay/hrv`
-  - Method: POST, Headers: `X-Relay-Secret: <your HEALTH_RELAY_SECRET>`
-  - Request Body: JSON → the list variable from the loop (the relay accepts
-    a single `{value, timestamp?}` object or an array of them)
-
-Test with `?dryRun=1` appended to the URL first — run the automation
-manually from the Shortcuts app (not waiting for the schedule), check the
-response, confirm it looks like
-`{"dryRun":true,"wouldPost":[{"value":...,"type":"HRV_SDNN","date":"...","timestamp":"..."}]}`
-for each reading, then drop the query param.
-
-Every reading is stored as its own row with its real timestamp — nothing
-here pre-averages or otherwise reduces it (see `get_hrv_samples`' own tool
-description for why: a single reading is noisy, and there's no established
-personal baseline yet to compare it against). Days the Shortcut doesn't run
-(phone locked at the trigger time, same limitation any automation on iOS
-has) just have no samples that day — that reads as absent, not zero.
-
-**If you'd rather pay for Health Auto Export instead of building the
-Shortcut**: its REST API automation sends
-`{data: {metrics: [{name, units, data: [...]}]}}`, which
-`lib/health-relay.js` also accepts (auto-detected, no config change) and
-reshapes into the same per-reading posts. Health Auto Export's docs don't
-commit to one field-naming convention for a reading's value/timestamp
-within that shape, so the relay guesses a few common ones (`qty`, `Avg`,
-`value`) — use `?debug=1` on top of `?dryRun=1` for the first real export to
-confirm the guess matched your actual payload before trusting it
-unattended.
 
 ## 6. Run it under a process supervisor
 
