@@ -38,6 +38,8 @@ const ENTRY_MODULES = [
   'structuralBalance.js',
   'structuralBalanceTemplates.js',
   'media-refs.js',
+  'recovery.js',
+  'recovery-view.js',
 ];
 
 const IMPORT_RE = /(?:import|export)\s[^'";]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm;

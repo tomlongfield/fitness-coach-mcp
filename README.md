@@ -1,7 +1,7 @@
 # Fitness coach MCP server
 
 A small, read-only bridge between a self-hosted fitness stack and Claude.
-Exposes seventeen tools over the Model Context Protocol, so Claude can pull live
+Exposes eighteen tools over the Model Context Protocol, so Claude can pull live
 training and nutrition data instead of you pasting it in:
 
 - `get_recent_workouts`, `get_exercise_history`, `get_current_routines`,
@@ -20,7 +20,7 @@ training and nutrition data instead of you pasting it in:
   for tracking direction, not a measurement; trust the trend, not the
   absolute number.
 - `get_weekly_schedule`, `preview_next_session`, `get_muscle_volume`,
-  `get_structural_balance` — openGym's own answers, computed with openGym's
+  `get_muscle_recovery`, `get_structural_balance` — openGym's own answers, computed with openGym's
   own code: a copy of the relevant part of its frontend logic
   (`frontend/src/lib/`) is kept under `lib/vendor/opengym/`, pinned to a
   release tag. So the schedule follows the app's rotation mode (sessions
@@ -29,7 +29,9 @@ training and nutrition data instead of you pasting it in:
   weight and reps the app will actually open with once its progression
   policy has had its say, not the routine's stored target. Muscle volume
   is the Stats screen's "planned vs completed" effective sets per muscle,
-  and structural balance is its Poliquin/Thibaudeau/ATG lift-ratio check.
+  muscle recovery is its fatigue/recovery map (per-muscle fatigue with a
+  36-hour half-life, plus retained strength for detraining), and
+  structural balance is its Poliquin/Thibaudeau/ATG lift-ratio check.
   After upgrading openGym, run `npm run update-opengym-vendor` (edit
   `VENDOR_TAG` in the script first) to re-sync it.
 - `get_workout_photos` — photos attached to openGym workouts (progress
