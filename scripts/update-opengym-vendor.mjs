@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VENDOR_TAG = 'v1.3.10';
+const VENDOR_TAG = 'v1.4.1';
 const tag = process.argv[2] || VENDOR_TAG;
 const BASE = `https://raw.githubusercontent.com/DuarteSantos8/openGym/${tag}/frontend/src/lib/`;
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/vendor/opengym');
@@ -40,9 +40,10 @@ const ENTRY_MODULES = [
   'media-refs.js',
   'recovery.js',
   'recovery-view.js',
+  'day-notes.js',
 ];
 
-const IMPORT_RE = /(?:import|export)\s[^'";]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm;
+const IMPORT_RE = /^\s*(?:import|export)\s[^'";]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm;
 
 async function fetchText(file) {
   const res = await fetch(BASE + file);
@@ -58,7 +59,11 @@ while (queue.length) {
   const text = await fetchText(file);
   files.set(file, text);
   if (!file.endsWith('.js')) continue;
-  for (const m of text.matchAll(IMPORT_RE)) {
+  // Comments are stripped first: prose like 'a switch from "40 total"' would
+  // otherwise read as an import. Strings containing // are rare enough in
+  // import lines that this crude strip is safe for the specifier scan.
+  const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+  for (const m of code.matchAll(IMPORT_RE)) {
     const spec = m[1] || m[2] || m[3];
     if (!spec.startsWith('./')) {
       throw new Error(`${file} imports ${spec}, which is outside frontend/src/lib — not vendorable as-is`);

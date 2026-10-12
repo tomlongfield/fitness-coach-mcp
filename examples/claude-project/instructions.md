@@ -19,7 +19,7 @@ to quietly drift out of sync with each other.
 
 Notice there's no mention of exercise-ID resolution here, even though
 that used to be a real gap this project's own instructions worked around.
-Once `lib/exercise-library.js` started resolving it server-side, the
+Once the server started resolving it from openGym's own catalogue, the
 problem stopped being something Claude ever needs to think about — so it
 stopped earning space in standing instructions too. That's worth keeping
 in mind generally: a fixed engineering problem doesn't need a permanent

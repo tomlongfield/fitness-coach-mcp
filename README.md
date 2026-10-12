@@ -400,9 +400,10 @@ with custom instructions and a knowledge file fills that gap.
 
 (An earlier version of this project resolved built-in exercise IDs via a
 lookup table kept in Claude's project knowledge. That's no longer
-necessary — `lib/exercise-library.js` resolves them server-side now, at
-no ongoing context cost to Claude. See `npm run update-exercise-library`
-if a raw ID ever shows up unresolved.)
+necessary — the server resolves them itself from openGym's own exercise
+catalogue (vendored under `lib/vendor/opengym/`), at no ongoing context
+cost to Claude. After an openGym upgrade adds exercises, re-run
+`npm run update-opengym-vendor` if a raw ID ever shows up unresolved.)
 
 Neither template is meant to be used verbatim — replace every placeholder
 with your own actual context.
