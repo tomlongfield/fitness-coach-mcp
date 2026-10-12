@@ -137,10 +137,13 @@ curl -X POST https://gym.example.com/api/pair/redeem \
 Returns `{ "token": "...", "user": {...} }`. That token is valid 90 days
 (openGym's default `SESSION_DAYS`) — put it in `.env` as `OPENGYM_BEARER_TOKEN`.
 
-**Note the expiry.** When it lapses, tool calls will start failing with a
-clear error message telling you to redo this step. There's nothing automatic
-here — put a reminder in your calendar for ~80 days out, or just re-pair
-whenever you see the error.
+**Renewal is automatic** with openGym v1.4.0 or later: once the token is past
+half its life, openGym hands a fresh one to this server on its next check-in
+(at most twice a day, whenever the tools are used), and the server keeps it in
+`data/opengym-token.json`. So this step is one-time, unless the server goes
+unused for more than ~45 days or you "sign out everywhere" in openGym — then
+tool calls fail with a clear error telling you to redo it. On older openGym
+versions, re-pair before the 90 days are up.
 
 ## 2. Get a SparkyFitness API key
 
@@ -418,20 +421,25 @@ with your own actual context.
   `get_workout_photos`, and only when that tool is called) and no exercise sessions
   (openGym already covers workouts; SparkyFitness's own exercise entries
   would just be a second, redundant source).
-- **No persistence beyond signed tokens.** Registered OAuth clients and
-  in-flight authorization codes live in memory; a restart clears them, and
-  Claude will just need to reconnect once. Access/refresh tokens are
-  self-contained signed strings, so a restart doesn't log you out.
+- **Almost no persistence.** Access/refresh tokens are self-contained signed
+  strings, so a restart doesn't log you out. Registered OAuth clients and the
+  renewed openGym token are saved to `data/` (or `DATA_DIR`), so a restart
+  never needs the connector re-added either — include that directory in your
+  backups. In-flight authorization codes live in memory only.
 - **One password, no per-request MFA.** Proportionate for a single-user
   personal server behind your own domain — not something to reuse for
   anything with other users.
 
 ## Troubleshooting
 
-- **"unknown client_id" on the login page** — the server restarted since you
-  added the connector. Remove and re-add the connector in Claude's settings.
-- **Tool calls fail with an openGym 401** — your `OPENGYM_BEARER_TOKEN` has
-  expired; redo step 1 and restart the server.
+- **"unknown client_id" on the login page** — the server lost its saved client
+  registrations (`data/oauth-clients.json` deleted or unwritable — check the
+  log for `[oauth] could not save`). Remove and re-add the connector in
+  Claude's settings.
+- **Tool calls fail with an openGym 401** — the openGym token expired (the
+  server went unused past its renewal window) or was signed out; redo step 1
+  and restart the server. The server log shows the token's expiry at start-up
+  and each renewal.
 - **Tool calls fail with a SparkyFitness 401** — your
   `SPARKYFITNESS_API_KEY` was revoked or disabled; generate a new one
   (step 2), update `.env`, and restart the server.

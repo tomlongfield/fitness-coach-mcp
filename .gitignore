@@ -8,6 +8,10 @@ examples/sparkyfitness/.env
 lib/tools/local/*
 !lib/tools/local/README.md
 
+# Instance state written by the server (lib/store.js): OAuth client
+# registrations and a renewed openGym token. Credentials, never commit.
+data/
+
 # Dependencies
 node_modules/
 
