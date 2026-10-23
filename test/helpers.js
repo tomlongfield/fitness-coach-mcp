@@ -83,6 +83,8 @@ export async function startHarness({ state = fixtureState() } = {}) {
       const date = new URL(req.url, 'http://x').searchParams.get('selectedDate');
       return json(date === new Date().toISOString().slice(0, 10) ? fixtureExerciseEntries() : []);
     }
+    // A day with nothing logged: SparkyFitness reports water as 0, not absent.
+    if (pathname === '/sparky/daily-summary') return json({ foodEntries: [], waterIntake: 0, goals: {} });
     if (pathname.startsWith('/sparky/')) return json([]);
     res.writeHead(404).end();
   });

@@ -124,6 +124,13 @@ test('openGym\'s own copy of a workout in Apple Health is marked, and not counte
   assert.equal(w.watchStrengthDurationMin, 25);
 });
 
+test('a day with no water logged reads null, not 0', async () => {
+  const { entries } = await h.callJson('get_daily_summary', { days: 1 });
+  assert.equal(entries[0].nutrition.waterMl, null);
+  const day = await h.callJson('get_nutrition_day');
+  assert.equal(day.waterIntakeMl, null);
+});
+
 test('SparkyFitness reads within a minute are shared, not repeated', async () => {
   const path = '/sparky/exercise-entries/by-date';
   await h.call('get_activity_sessions', { days: 3 });
