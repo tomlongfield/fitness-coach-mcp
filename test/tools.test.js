@@ -124,6 +124,23 @@ test('openGym\'s own copy of a workout in Apple Health is marked, and not counte
   assert.equal(w.watchStrengthDurationMin, 25);
 });
 
+test('a top set tied on weight and reps reads the hardest RPE, and a per-side one keeps its row\'s', async () => {
+  const { topSetOf } = await import('../lib/tools/workouts.js');
+  const tied = [{ w: 45, r: 10, rpe: 8.5, done: true }, { w: 45, r: 10, rpe: 9.5, done: true }, { w: 45, r: 10, rpe: 9, done: true }];
+  assert.equal(topSetOf(tied).rpe, 9.5);
+  assert.equal(topSetOf([{ w: 45, r: 10, done: true }, { w: 45, r: 10, rpe: 9, done: true }]).rpe, 9);
+  const perSide = [{ w: 7, r: 26, rpe: 8, done: true, sides: { L: { w: 7, r: 13, done: true }, R: { w: 7, r: 13, done: true } } }];
+  assert.deepEqual([topSetOf(perSide).r, topSetOf(perSide).rpe], [13, 8]);
+});
+
+test('timestamps are local time with their UTC offset, to the second', async () => {
+  const stamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/;
+  const [w] = await h.callJson('get_recent_workouts', { limit: 1 });
+  assert.match(w.startTime, stamp);
+  assert.match(w.endTime, stamp);
+  assert.match((await h.callJson('get_muscle_recovery')).asOf, stamp);
+});
+
 test('a day with no water logged reads null, not 0', async () => {
   const { entries } = await h.callJson('get_daily_summary', { days: 1 });
   assert.equal(entries[0].nutrition.waterMl, null);
