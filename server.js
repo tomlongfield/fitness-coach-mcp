@@ -7,7 +7,9 @@ import { registerOAuthRoutes, requireAuth } from './lib/oauth.js';
 import { buildServer } from './lib/tools.js';
 
 const app = express();
-app.set('trust proxy', true); // we sit behind nginx/caddy; needed for req.ip in the login rate limiter
+// Behind nginx/caddy: req.ip, which the login lockout counts by, comes from
+// X-Forwarded-For, believed only from the proxy (config.trustProxy).
+app.set('trust proxy', config.trustProxy);
 
 // DCR (/register) uses JSON; the token endpoint uses form-urlencoded (RFC 6749).
 app.use(express.json());
@@ -50,7 +52,7 @@ app.delete(config.mcpPath, requireAuth, (req, res) => res.status(405).json({ err
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
-app.listen(config.port, () => {
-  console.log(`Fitness coach MCP server listening on :${config.port}`);
+app.listen(config.port, config.host, () => {
+  console.log(`Fitness coach MCP server listening on ${config.host}:${config.port}`);
   console.log(`MCP endpoint (public): ${config.mcpUrl}`);
 });

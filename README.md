@@ -30,7 +30,7 @@ training and nutrition data instead of you pasting it in:
   policy has had its say, not the routine's stored target. Muscle volume
   is the Stats screen's "planned vs completed" effective sets per muscle,
   muscle recovery is its fatigue/recovery map (per-muscle fatigue with a
-  36-hour half-life, plus retained strength for detraining), and
+  24 to 48-hour half-life by muscle, plus retained strength for detraining), and
   structural balance is its Poliquin/Thibaudeau/ATG lift-ratio check.
   After upgrading openGym, run `npm run update-opengym-vendor` (edit
   `VENDOR_TAG` in the script first) to re-sync it.
@@ -193,12 +193,25 @@ something else on the box before you settle on it:
 sudo ss -ltnp | grep :8787
 ```
 
+The server listens on `127.0.0.1` only, for a reverse proxy on the same
+machine, so nothing can reach it without going through the proxy. If your
+proxy runs elsewhere (another container or host), set `HOST=0.0.0.0` and
+`TRUST_PROXY` to the proxy's address or subnet: the login lockout counts
+attempts by the client address the proxy forwards, and believes it only
+from the proxy it trusts.
+
 ## 4. Install and run
 
 ```bash
-npm install
+npm ci
+npm test
 npm start
 ```
+
+`npm ci` installs exactly the versions in `package-lock.json`. `npm test`
+runs every tool against a fake openGym and SparkyFitness (`test/`), so it
+needs neither; run it after any change, and after
+`npm run update-opengym-vendor` especially.
 
 Sanity-check it's alive: `curl http://localhost:8787/healthz` → `{"ok":true}`.
 
@@ -388,6 +401,11 @@ server serves — enter the `MCP_PASSWORD` you generated. After that, Claude
 holds a signed access/refresh token pair and won't ask again unless you
 disconnect, or ~30 days pass without use (the refresh token is good for a
 year, refreshed automatically).
+
+These tokens are signed, not stored, so none can be revoked one at a time.
+To sign every client out (a lost device, a token you think has leaked),
+change `TOKEN_SECRET` and restart: every existing token stops working, and
+each client asks for the password again.
 
 ## 8. Set up a Claude Project (recommended)
 

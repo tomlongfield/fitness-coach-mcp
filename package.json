@@ -7,6 +7,7 @@
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test test/",
     "build-favicon": "node scripts/build-favicon-ico.mjs",
     "update-opengym-vendor": "node scripts/update-opengym-vendor.mjs"
   },
