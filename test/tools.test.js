@@ -47,12 +47,14 @@ test('the server sends instructions', () => {
 });
 
 // Tool definitions ride along in every conversation with the connector on.
-// The budget is their size after the October 2026 trim (19.3k characters)
-// plus some room: raise it on purpose, not by drift.
+// The budget is their size after the October 2026 trim (19.3k characters),
+// plus the shared rules put back once claude.ai turned out not to read the
+// server instructions (21.0k), plus some room: raise it on purpose, not by
+// drift.
 test('tool definitions stay within their context budget', async () => {
   const { tools } = await h.client.listTools();
   const chars = JSON.stringify(tools).length;
-  assert.ok(chars < 21_000, `tool definitions are ${chars} characters`);
+  assert.ok(chars < 22_500, `tool definitions are ${chars} characters`);
 });
 
 for (const [name, args] of Object.entries(SMOKE)) {
