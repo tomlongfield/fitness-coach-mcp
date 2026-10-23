@@ -47,14 +47,16 @@ test('the server sends instructions', () => {
 });
 
 // Tool definitions ride along in every conversation with the connector on.
-// The budget is their size in October 2026 (21.0k characters), after the
-// trim and after the shared rules were put back for claude.ai, which skips
-// server instructions. Going over means trimming elsewhere, or the user
-// agreeing to a bigger budget: never raise it in the change that needs it.
+// Measured as what the model is given: name, description and input schema
+// (titles and annotations are for the client). The budget, 10,000
+// characters, is the user's, set in October 2026, with the shared rules
+// kept in each description because claude.ai skips server instructions.
+// Going over means trimming elsewhere, or the user agreeing to a bigger
+// budget: never raise it in the change that needs it.
 test('tool definitions stay within their context budget', async () => {
   const { tools } = await h.client.listTools();
-  const chars = JSON.stringify(tools).length;
-  assert.ok(chars < 21_000, `tool definitions are ${chars} characters`);
+  const chars = JSON.stringify(tools.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }))).length;
+  assert.ok(chars < 10_000, `tool definitions are ${chars} characters`);
 });
 
 for (const [name, args] of Object.entries(SMOKE)) {
@@ -113,6 +115,13 @@ test('an unknown exercise id is an error that says where ids come from', async (
   assert.match(r.content[0].text, /get_current_routines/);
   const known = await h.callJson('get_exercise_history', { exerciseId: '0596' });
   assert.equal(known.occurrenceCount, 0, 'a catalogue exercise never logged is simply empty');
+});
+
+test('openGym\'s own copy of a workout in Apple Health is marked, and not counted as watch strength time', async () => {
+  const { entries } = await h.callJson('get_activity_sessions', { days: 1 });
+  assert.deepEqual(entries.map((e) => [e.durationMin, e.openGymCopy ?? false]), [[25, false], [30, true]]);
+  const [w] = await h.callJson('get_recent_workouts', { limit: 1 });
+  assert.equal(w.watchStrengthDurationMin, 25);
 });
 
 test('SparkyFitness reads within a minute are shared, not repeated', async () => {

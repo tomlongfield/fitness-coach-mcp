@@ -46,6 +46,19 @@ export function fixtureState() {
   };
 }
 
+// Today's Apple Health workouts as SparkyFitness returns them: a strength
+// session from Apple's Workout app, and openGym's own copy of the logged
+// workout, which openGym writes to Apple Health with no energy or heart rate.
+function fixtureExerciseEntries() {
+  const today = new Date().toISOString().slice(0, 10);
+  const entry = (id, minutes, kcal, bundle) => ({
+    id, entry_date: today, name: 'Traditional Strength Training', duration_minutes: minutes, calories_burned: kcal,
+    exercise_snapshot: { category: 'Strength' },
+    activity_details: [{ detail_data: { sourceBundleId: bundle } }],
+  });
+  return [entry('apple', 25, 200, 'com.apple.health.1234'), entry('copy', 30, 0, 'ch.opengym.app')];
+}
+
 // Starts the fake upstream, points the server's config at it, and returns
 // an MCP client connected to a fresh buildServer(). `hits` counts requests
 // per path, for checking what the server actually asked for. `failNext`
@@ -66,6 +79,10 @@ export async function startHarness({ state = fixtureState() } = {}) {
     if (pathname === '/api/data') return json({ state, rev: 1 });
     if (pathname === '/api/me') return json({});
     if (pathname.startsWith('/api/media/')) { res.writeHead(200, { 'content-type': 'image/jpeg' }); return res.end(JPEG); }
+    if (pathname === '/sparky/exercise-entries/by-date') {
+      const date = new URL(req.url, 'http://x').searchParams.get('selectedDate');
+      return json(date === new Date().toISOString().slice(0, 10) ? fixtureExerciseEntries() : []);
+    }
     if (pathname.startsWith('/sparky/')) return json([]);
     res.writeHead(404).end();
   });
