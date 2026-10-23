@@ -34,9 +34,14 @@ training and nutrition data instead of you pasting it in:
   structural balance is its Poliquin/Thibaudeau/ATG lift-ratio check.
   After upgrading openGym, run `npm run update-opengym-vendor` (edit
   `VENDOR_TAG` in the script first) to re-sync it.
-- `get_workout_photos` — photos attached to openGym workouts (progress
-  photos), returned as images, fetched from openGym's `/api/media/` only
-  when called. Videos come back as their poster frame.
+- `get_workout_photos` — photos attached to openGym workouts, and
+  progress photos filed under a day without one, returned as images,
+  fetched from openGym's `/api/media/` only when called. Videos come back
+  as their poster frame.
+- Sets ticked on openGym's Apple Watch app (v1.4.2+) carry the heart rate
+  the watch measured over the set and over the rest after it, as
+  `get_recent_workouts` returns them. A routine's planned backup exercises
+  show in `get_current_routines` and `preview_next_session`.
 - Across the openGym tools, volume and top sets count work sets only:
   warm-up sets are left out, drop-set drops are included, and unilateral
   sets logged per side are read one side at a time, the same as openGym's
