@@ -48,12 +48,20 @@ export function fixtureState() {
 
 // Starts the fake upstream, points the server's config at it, and returns
 // an MCP client connected to a fresh buildServer(). `hits` counts requests
-// per path, for checking what the server actually asked for.
+// per path, for checking what the server actually asked for. `failNext`
+// maps a path to how many of its next requests answer 500, as SparkyFitness
+// does when its database pool is exhausted.
 export async function startHarness({ state = fixtureState() } = {}) {
   const hits = new Map();
+  const failNext = new Map();
   const upstream = http.createServer((req, res) => {
     const { pathname } = new URL(req.url, 'http://x');
     hits.set(pathname, (hits.get(pathname) || 0) + 1);
+    if (failNext.get(pathname) > 0) {
+      failNext.set(pathname, failNext.get(pathname) - 1);
+      res.writeHead(500, { 'content-type': 'application/json' });
+      return res.end('{"error":"timeout exceeded when trying to connect"}');
+    }
     const json = (body) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
     if (pathname === '/api/data') return json({ state, rev: 1 });
     if (pathname === '/api/me') return json({});
@@ -95,5 +103,5 @@ export async function startHarness({ state = fixtureState() } = {}) {
     await client.close();
     await new Promise((resolve) => upstream.close(resolve));
   };
-  return { client, call, callJson, hits, close };
+  return { client, call, callJson, hits, failNext, close };
 }

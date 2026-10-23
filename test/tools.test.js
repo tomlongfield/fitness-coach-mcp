@@ -120,3 +120,23 @@ test('SparkyFitness reads within a minute are shared, not repeated', async () =>
   await h.call('get_activity_sessions', { days: 3 });
   assert.equal(h.hits.get(path), first);
 });
+
+test('a SparkyFitness 500 is retried, so a brief overload does not fail the call', async () => {
+  const path = '/sparky/sleep/analytics';
+  const before = h.hits.get(path) || 0;
+  h.failNext.set(path, 2);
+  const r = await h.call('get_sleep_trend', { days: 9 });
+  assert.ok(!r.isError, r.content[0].text);
+  assert.equal(h.hits.get(path) - before, 3);
+});
+
+test('a SparkyFitness 500 that persists is still an error, after two retries', async () => {
+  const path = '/sparky/sleep/analytics';
+  const before = h.hits.get(path) || 0;
+  h.failNext.set(path, 10);
+  const r = await h.call('get_sleep_trend', { days: 11 });
+  h.failNext.delete(path);
+  assert.ok(r.isError);
+  assert.match(r.content[0].text, /500/);
+  assert.equal(h.hits.get(path) - before, 3);
+});
