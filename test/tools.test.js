@@ -86,6 +86,22 @@ test('watch heart rate is passed through per set, and only when it is a reading'
   assert.deepEqual(deadBug.sets[0].heartRateBpm, { avg: 96, max: 104 });
 });
 
+test("a workout's own heart rate is passed through with where it came from", async () => {
+  const [w] = await h.callJson('get_recent_workouts', { limit: 1 });
+  assert.deepEqual(w.heartRateBpm, { avg: 112, max: 141 });
+  assert.equal(w.heartRateSource, 'apple_health');
+});
+
+test('progression off, starting from the last session, opens at last time and says so', async () => {
+  const preview = await h.callJson('preview_next_session', { routineId: 'r2' });
+  const [curl] = preview.exercises;
+  assert.equal(preview.startsFrom, 'last_session');
+  assert.equal(curl.prescription.kind, 'off');
+  assert.equal(curl.weightSource, 'last_session');
+  assert.equal(curl.repsSource, 'last_session');
+  assert.match(curl.openingSets[0].label, /^30/);
+});
+
 test('routine backups come back named, without duplicates or the exercise itself', async () => {
   const expected = [
     { exerciseId: '0596', exerciseName: 'lever seated fly' },

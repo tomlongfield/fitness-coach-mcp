@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VENDOR_TAG = 'v1.4.2';
+const VENDOR_TAG = 'v1.4.3';
 const tag = process.argv[2] || VENDOR_TAG;
 const BASE = `https://raw.githubusercontent.com/DuarteSantos8/openGym/${tag}/frontend/src/lib/`;
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/vendor/opengym');

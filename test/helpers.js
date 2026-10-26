@@ -16,6 +16,7 @@ export function fixtureState() {
   const t0 = Date.now() - 3600e3;
   return {
     unit: 'kg',
+    startFrom: 'last',                                // "Planned sessions start from: Your last session"
     routines: [{
       id: 'r1', name: 'Upper A', emoji: 'figureStrength',
       ex: [
@@ -23,9 +24,13 @@ export function fixtureState() {
         { id: '0334', sets: 3, mode: 'reps', reps: 20, weight: 4 },
         { id: '0276', sets: 2, mode: 'reps', reps: 10, weight: 0, side: true },
       ],
+    }, {
+      id: 'r2', name: 'Upper B',
+      ex: [{ id: '0577', sets: 3, mode: 'reps', reps: 10, weight: 25, prog: 'off' }],
     }],
     workouts: [{
       id: 'watch-ABC', d: today, name: 'Upper A', routineId: 'r1', start: t0, end: t0 + 1800e3,
+      hr: { avg: 112.4, max: 141, src: 'ah', n: 412 },             // read back from Apple Health (1.4.3)
       media: [photo(hash('a'), t0 + 60e3)],
       entries: [
         { id: '0577', sets: [

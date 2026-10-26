@@ -40,7 +40,12 @@ training and nutrition data instead of you pasting it in:
   as their poster frame.
 - Sets ticked on openGym's Apple Watch app (v1.4.2+) carry the heart rate
   the watch measured over the set and over the rest after it, as
-  `get_recent_workouts` returns them. A routine's planned backup exercises
+  `get_recent_workouts` returns them. From openGym v1.4.3, with "Heart rate
+  from your watch" switched on in the app, openGym also fills in the
+  heart rate of sets without one, and of the whole workout
+  (`heartRateBpm` plus `heartRateSource`), from Apple Health or Health
+  Connect, for any watch. It reads only while the app is open, and only
+  workouts from the last day. A routine's planned backup exercises
   show in `get_current_routines` and `preview_next_session`.
 - Across the openGym tools, volume and top sets count work sets only:
   warm-up sets are left out, drop-set drops are included, and unilateral
