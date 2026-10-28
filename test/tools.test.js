@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startHarness } from './helpers.js';
+import { execFileSync } from 'node:child_process';
 import { asJson, MAX_RESULT_CHARS } from '../lib/tools/shared.js';
 
 let h;
@@ -74,6 +75,13 @@ test('results are compact JSON', async () => {
 test('a result over the size limit is refused with a way forward', () => {
   assert.throws(() => asJson({ x: 'a'.repeat(MAX_RESULT_CHARS) }), /Ask for less/);
   assert.equal(asJson({ x: 1 }).content[0].text, '{"x":1}');
+});
+
+test('MAX_RESULT_CHARS raises the size limit for in-process callers', () => {
+  const shared = new URL('../lib/tools/shared.js', import.meta.url).href;
+  const script = `const { MAX_RESULT_CHARS, asJson } = await import(${JSON.stringify(shared)}); asJson({ x: 'a'.repeat(200000) }); console.log(MAX_RESULT_CHARS);`;
+  const out = execFileSync(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, MAX_RESULT_CHARS: '1000000' } });
+  assert.equal(String(out).trim(), '1000000');
 });
 
 test('watch heart rate is passed through per set, and only when it is a reading', async () => {
