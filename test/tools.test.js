@@ -199,3 +199,53 @@ test('a SparkyFitness 500 that persists is still an error, after two retries', a
   assert.match(r.content[0].text, /500/);
   assert.equal(h.hits.get(path) - before, 3);
 });
+
+test('at most four SparkyFitness requests are open at once, across tools running together', async () => {
+  h.sparky.delayMs = 20;
+  h.sparky.peak = 0;
+  try {
+    const results = await Promise.all([
+      h.call('get_daily_summary', { days: 40 }),
+      h.call('get_activity_sessions', { days: 40 }),
+    ]);
+    for (const r of results) assert.ok(!r.isError, r.content[0].text);
+  } finally {
+    h.sparky.delayMs = 0;
+  }
+  assert.ok(h.sparky.peak >= 2 && h.sparky.peak <= 4, `peak was ${h.sparky.peak}`);
+});
+
+// These move the clock on, so they stay last: what they cache looks newer
+// than it is once the clock is put back.
+test('heart-rate zones are kept for a day once SparkyFitness has them, and asked again while it has none', async (t) => {
+  const path = '/sparky/generic-health/workout-hr-zones/apple';
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  h.sparky.zones = [];
+  await h.call('get_activity_sessions', { days: 1 });
+  const first = h.hits.get(path);
+
+  t.mock.timers.tick(2 * 60e3);
+  h.sparky.zones = [{ zone_index: 2, zone_lower_bpm: 110, zone_upper_bpm: 130, seconds_in_zone: 600 }];
+  const { entries } = await h.callJson('get_activity_sessions', { days: 1 });
+  assert.equal(h.hits.get(path), first + 1, 'none yet, so asked again');
+  assert.deepEqual(entries[0].heartRateZones, [{ zone: 2, lowerBpm: 110, upperBpm: 130, minutes: 10 }]);
+
+  t.mock.timers.tick(6 * 3600e3);
+  await h.call('get_activity_sessions', { days: 1 });
+  assert.equal(h.hits.get(path), first + 1, 'kept');
+});
+
+test('days before yesterday are kept for an hour; today and yesterday for a minute', async (t) => {
+  const path = '/sparky/daily-summary';
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const { entryCount } = await h.callJson('get_nutrition_trend', { days: 6 });
+  const first = h.hits.get(path);
+
+  t.mock.timers.tick(2 * 60e3);
+  await h.call('get_nutrition_trend', { days: 6 });
+  assert.equal(h.hits.get(path) - first, 2);
+
+  t.mock.timers.tick(3600e3);
+  await h.call('get_nutrition_trend', { days: 6 });
+  assert.equal(h.hits.get(path) - first, 2 + entryCount);
+});

@@ -56,25 +56,34 @@ export function fixtureState() {
 // workout, which openGym writes to Apple Health with no energy or heart rate.
 function fixtureExerciseEntries() {
   const today = new Date().toISOString().slice(0, 10);
-  const entry = (id, minutes, kcal, bundle) => ({
+  const entry = (id, minutes, kcal, bundle, hr) => ({
     id, entry_date: today, name: 'Traditional Strength Training', duration_minutes: minutes, calories_burned: kcal,
+    ...(hr ? { avg_heart_rate: hr } : {}),
     exercise_snapshot: { category: 'Strength' },
     activity_details: [{ detail_data: { sourceBundleId: bundle } }],
   });
-  return [entry('apple', 25, 200, 'com.apple.health.1234'), entry('copy', 30, 0, 'ch.opengym.app')];
+  return [entry('apple', 25, 200, 'com.apple.health.1234', 118), entry('copy', 30, 0, 'ch.opengym.app')];
 }
 
 // Starts the fake upstream, points the server's config at it, and returns
 // an MCP client connected to a fresh buildServer(). `hits` counts requests
 // per path, for checking what the server actually asked for. `failNext`
 // maps a path to how many of its next requests answer 500, as SparkyFitness
-// does when its database pool is exhausted.
+// does when its database pool is exhausted. `sparky` slows SparkyFitness's
+// answers (delayMs), records the most requests it had open at once (peak),
+// and holds the heart-rate zones of the Watch session (zones).
 export async function startHarness({ state = fixtureState() } = {}) {
   const hits = new Map();
   const failNext = new Map();
-  const upstream = http.createServer((req, res) => {
+  const sparky = { delayMs: 0, open: 0, peak: 0, zones: [] };
+  const upstream = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, 'http://x');
     hits.set(pathname, (hits.get(pathname) || 0) + 1);
+    if (pathname.startsWith('/sparky/')) {
+      sparky.peak = Math.max(sparky.peak, ++sparky.open);
+      res.on('finish', () => sparky.open--);
+      if (sparky.delayMs) await new Promise((resolve) => setTimeout(resolve, sparky.delayMs));
+    }
     if (failNext.get(pathname) > 0) {
       failNext.set(pathname, failNext.get(pathname) - 1);
       res.writeHead(500, { 'content-type': 'application/json' });
@@ -88,6 +97,7 @@ export async function startHarness({ state = fixtureState() } = {}) {
       const date = new URL(req.url, 'http://x').searchParams.get('selectedDate');
       return json(date === new Date().toISOString().slice(0, 10) ? fixtureExerciseEntries() : []);
     }
+    if (pathname === '/sparky/generic-health/workout-hr-zones/apple') return json({ data: sparky.zones });
     // A day with nothing logged: SparkyFitness reports water as 0, not absent.
     if (pathname === '/sparky/daily-summary') return json({ foodEntries: [], waterIntake: 0, goals: {} });
     if (pathname.startsWith('/sparky/')) return json([]);
@@ -127,5 +137,5 @@ export async function startHarness({ state = fixtureState() } = {}) {
     await client.close();
     await new Promise((resolve) => upstream.close(resolve));
   };
-  return { client, call, callJson, hits, failNext, close };
+  return { client, call, callJson, hits, failNext, sparky, close };
 }
