@@ -53,7 +53,7 @@ training and nutrition data instead of you pasting it in:
   own Stats. Sessions marked "Don't count for progression" are flagged,
   and `get_lift_progression_summary` leaves them out.
 - `get_sleep_trend` gives each night's stages (deep, REM, light, awake)
-  and overnight HRV and resting HR where the source sends them;
+  and overnight HRV where the source sends it;
   `get_sleep_rollup` averages every sleep figure over the last 7, 28 and 84
   nights, with the differences between windows, and passes through
   SparkyFitness's sleep need, sleep debt and chronotype (run

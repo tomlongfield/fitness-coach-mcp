@@ -100,7 +100,8 @@ test('the sleep trend carries each night\'s stages and overnight HRV, from the n
   assert.equal(last.lightMin, 270);
   assert.equal(last.awakeMin, 20);
   assert.equal(last.overnightHrvMs, 70);
-  assert.equal(last.overnightRestingHrBpm, 60);
+  // The row's resting HR is the day's, copied in by the iOS app: left out.
+  assert.ok(!('overnightRestingHrBpm' in last));
   assert.equal(last.asleepMin, 420);
   assert.equal(last.bedtime, `${day(0)}T23:30:00+00:00`.replace(day(0), day(1)));
   // The longest row on a date is the night, not a short one beside it.
@@ -127,6 +128,7 @@ test('the sleep rollup averages each window over the nights it has', async () =>
   assert.equal(w7.lightPct, 64.3);
   assert.equal(w7.nightsBelowNeed, 6); // 7 h against a 7.39 h need
   assert.deepEqual(w7.overnightHrvMs, { mean: 71, nights: 3 });
+  assert.ok(!('overnightRestingHrBpm' in w7));
   assert.deepEqual(w7.hrvMs, { mean: 60, days: 7 });
   assert.deepEqual(w7.restingHrBpm, { mean: null, days: 0 });
   assert.ok(!('spo2AvgPct' in w7), 'a figure no night has is left out');
