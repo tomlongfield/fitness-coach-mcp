@@ -71,8 +71,11 @@ function fixtureExerciseEntries() {
 // maps a path to how many of its next requests answer 500, as SparkyFitness
 // does when its database pool is exhausted. `sparky` slows SparkyFitness's
 // answers (delayMs), records the most requests it had open at once (peak),
-// and holds the heart-rate zones of the Watch session (zones).
-export async function startHarness({ state = fixtureState() } = {}) {
+// and holds the heart-rate zones of the Watch session (zones). `routes`
+// answers chosen paths with a test's own body: a key ending in "/" matches
+// every path under it, a function is called with the request URL, and null
+// answers 404 (an endpoint this SparkyFitness version doesn't have).
+export async function startHarness({ state = fixtureState(), routes = {} } = {}) {
   const hits = new Map();
   const failNext = new Map();
   const sparky = { delayMs: 0, open: 0, peak: 0, zones: [] };
@@ -90,6 +93,12 @@ export async function startHarness({ state = fixtureState() } = {}) {
       return res.end('{"error":"timeout exceeded when trying to connect"}');
     }
     const json = (body) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+    const route = pathname in routes ? pathname : Object.keys(routes).find((k) => k.endsWith('/') && pathname.startsWith(k));
+    if (route !== undefined) {
+      const body = routes[route];
+      if (body === null) { res.writeHead(404, { 'content-type': 'application/json' }); return res.end('{"error":"Not found"}'); }
+      return json(typeof body === 'function' ? body(new URL(req.url, 'http://x')) : body);
+    }
     if (pathname === '/api/data') return json({ state, rev: 1 });
     if (pathname === '/api/me') return json({});
     if (pathname.startsWith('/api/media/')) { res.writeHead(200, { 'content-type': 'image/jpeg' }); return res.end(JPEG); }

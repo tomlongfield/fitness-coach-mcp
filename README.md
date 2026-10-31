@@ -52,8 +52,15 @@ training and nutrition data instead of you pasting it in:
   sets logged per side are read one side at a time, the same as openGym's
   own Stats. Sessions marked "Don't count for progression" are flagged,
   and `get_lift_progression_summary` leaves them out.
+- `get_sleep_trend` gives each night's stages (deep, REM, light, awake)
+  and overnight HRV and resting HR where the source sends them;
+  `get_sleep_rollup` averages every sleep figure over the last 7, 28 and 84
+  nights, with the differences between windows, and passes through
+  SparkyFitness's sleep need, sleep debt and chronotype (run
+  **Reports → Sleep → Sleep Science → Recalculate** in SparkyFitness once,
+  or the need stays at its 8.25 h default).
 - `get_nutrition_day`, `get_nutrition_trend`, `get_bodyweight_trend`,
-  `get_sleep_trend`, `get_vitals_trend`, `get_activity_sessions` — from
+  `get_sleep_trend`, `get_sleep_rollup`, `get_vitals_trend`, `get_activity_sessions` — from
   [SparkyFitness](https://github.com/CodeWithCJ/SparkyFitness) (treated as
   the authoritative source for body measurements here — openGym does log a
   bodyweight figure per workout too, but it's manually re-typed rather than
