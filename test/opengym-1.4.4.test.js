@@ -20,6 +20,13 @@ function state() {
   curl.sets[1].note = '  grip slipped ';
   curl.sets[2].at = t0 + 660e3;
   deadBug.sets[0].at = t0 + 900e3;
+  // One side at a time: each side keeps its own tick, and the set as a whole may have none.
+  const side = (at) => ({ w: 5, r: 10, done: true, ...(at ? { at } : {}) });
+  today.entries.push({ id: '0334', sets: [
+    { sides: { L: side(t0 + 1000e3), R: side(t0 + 1060e3) }, w: 5, r: 20, done: true },
+    { sides: { L: side(), R: side() }, w: 5, r: 20, done: true, at: t0 + 1200e3 },
+    { sides: { L: side(t0 + 1300e3), R: { w: 5, r: 10, done: false, at: t0 + 1400e3 } }, w: 5, r: 10, done: false },
+  ] });
   // Eight days ago under an exercise since merged into 0577, seven days ago as 0577 itself.
   s.workouts.unshift(
     { id: 'w-8', d: isoDaysFromNow(-8), name: 'Upper A', routineId: 'r1', start: t0 - 8 * DAY, end: t0 - 8 * DAY + 1800e3,
@@ -55,6 +62,17 @@ test('a set says when it was ticked', async () => {
   // The harness runs in UTC, so the local timestamp is the UTC one with +00:00.
   assert.equal(curl.sets[0].tickedAt, `${new Date(Date.parse(w.startTime) + 300e3).toISOString().slice(0, 19)}+00:00`);
   assert.equal(w.exercises[0].sets.filter((s) => s.tickedAt).length, 3);
+});
+
+test('a set done one side at a time is ticked when its later side was, as openGym times it', async () => {
+  const w = await todaysWorkout();
+  const raise = w.exercises.find((e) => e.exerciseId === '0334');
+  const local = (ms) => `${new Date(Date.parse(w.startTime) + ms).toISOString().slice(0, 19)}+00:00`;
+  assert.equal(raise.sets[0].tickedAt, local(1060e3));
+  // Sides without their own tick fall back to the set's.
+  assert.equal(raise.sets[1].tickedAt, local(1200e3));
+  // An undone side's tick doesn't count.
+  assert.equal(raise.sets[2].tickedAt, local(1300e3));
 });
 
 test('each exercise says how long it took, from its tick times', async () => {
