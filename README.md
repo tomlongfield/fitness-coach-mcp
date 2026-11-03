@@ -47,6 +47,17 @@ training and nutrition data instead of you pasting it in:
   Connect, for any watch. It reads only while the app is open, and only
   workouts from the last day. A routine's planned backup exercises
   show in `get_current_routines` and `preview_next_session`.
+- From openGym v1.4.4, `get_recent_workouts` gives each set its own note,
+  when it was ticked (`tickedAt`) and openGym's comparison with the same
+  set last time (`vsLast`), and each exercise the minutes it took
+  (`timeMin`). A running programme shows in `get_weekly_schedule` (which
+  week, and `deload` on a deload week's days) and in
+  `preview_next_session` (this week's %1RM, RPE or deload; a future
+  `date` previews that week). A deload week's sessions come back as
+  `excludedFromProgression`, as the app keeps them out of progression.
+  `get_muscle_volume` for this week adds each main muscle's weekly target
+  range from the app's settings. An exercise merged into another in the
+  app reads as the one it went into everywhere.
 - Across the openGym tools, volume and top sets count work sets only:
   warm-up sets are left out, drop-set drops are included, and unilateral
   sets logged per side are read one side at a time, the same as openGym's

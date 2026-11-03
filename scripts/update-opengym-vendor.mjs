@@ -11,7 +11,7 @@
 //
 // Starts from ENTRY_MODULES and follows every relative import/export, so a
 // new upstream dependency is picked up without updating this list. After
-// running, `node -e "import('./lib/vendor/opengym/index.js')"` must still
+// running, `node -e "import('./lib/opengym-logic.js')"` must still
 // load under plain node — upstream's modules are written for Vite, and a
 // Vite-only import (import.meta.glob, a .jsx file) landing in this graph
 // would only show up at server start.
@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VENDOR_TAG = 'v1.4.3';
+const VENDOR_TAG = 'v1.4.4';
 const tag = process.argv[2] || VENDOR_TAG;
 const BASE = `https://raw.githubusercontent.com/DuarteSantos8/openGym/${tag}/frontend/src/lib/`;
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/vendor/opengym');
@@ -43,6 +43,12 @@ const ENTRY_MODULES = [
   'day-notes.js',
   'heart-rate.js',
   'routine-backups.js',
+  'exercise-merge.js',
+  'programmes.js',
+  'set-notes.js',
+  'set-trend.js',
+  'muscle-targets.js',
+  'exercise-time.js',
 ];
 
 const IMPORT_RE = /^\s*(?:import|export)\s[^'";]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm;
