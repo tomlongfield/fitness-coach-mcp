@@ -105,3 +105,13 @@ test("this week's sets per muscle come with the profile's target range", async (
   const rolling = await h.callJson('get_muscle_volume', { days: 7 });
   assert.equal(rolling.muscles[0].weeklyTarget, undefined, 'a rolling window has no weekly range');
 });
+
+test("the week's plan is held against the same range, so midweek isn't all 'below'", async () => {
+  const volume = await h.callJson('get_muscle_volume');
+  const status = (n, lo, hi) => (n < lo ? 'below' : n > hi ? 'above' : 'in');
+  const chest = volume.muscles.find((m) => m.slug === 'chest');
+  assert.ok(chest.plannedSets > 0, 'the fixture plans some chest work');
+  assert.equal(chest.plannedStatus, status(chest.plannedSets, 12, 22));
+  const rolling = await h.callJson('get_muscle_volume', { days: 7 });
+  assert.equal(rolling.muscles[0].plannedStatus, undefined);
+});
