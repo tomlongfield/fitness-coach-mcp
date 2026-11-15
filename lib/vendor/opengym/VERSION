@@ -1,2 +1,3 @@
-DuarteSantos8/openGym v1.4.4 — frontend/src/lib/, copied verbatim by scripts/update-opengym-vendor.mjs.
+DuarteSantos8/openGym v1.4.5 — frontend/src/lib/, copied verbatim by scripts/update-opengym-vendor.mjs.
+Only change: imports leaving frontend/src/lib point into _upstream/, in streak.js.
 Do not edit these files by hand; re-run the script instead.

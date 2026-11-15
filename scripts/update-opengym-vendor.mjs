@@ -15,14 +15,21 @@
 // load under plain node — upstream's modules are written for Vite, and a
 // Vite-only import (import.meta.glob, a .jsx file) landing in this graph
 // would only show up at server start.
+//
+// Files are copied verbatim, with one exception: since v1.4.5 a few lib
+// modules import upstream code outside frontend/src/lib (streak.js re-exports
+// api/coach/core/streak.js). Such a file is copied to _upstream/<repo path>
+// and only the import specifiers that point at it are rewritten. A bare
+// (package) import still stops the script: that code needs a dependency.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const VENDOR_TAG = 'v1.4.4';
+const VENDOR_TAG = 'v1.4.5';
 const tag = process.argv[2] || VENDOR_TAG;
-const BASE = `https://raw.githubusercontent.com/DuarteSantos8/openGym/${tag}/frontend/src/lib/`;
+const BASE = `https://raw.githubusercontent.com/DuarteSantos8/openGym/${tag}/`;
+const LIB = 'frontend/src/lib/';
 const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../lib/vendor/opengym');
 
 const ENTRY_MODULES = [
@@ -49,6 +56,10 @@ const ENTRY_MODULES = [
   'set-trend.js',
   'muscle-targets.js',
   'exercise-time.js',
+  'activities.js',
+  'deload-cycle.js',
+  'daily-form.js',
+  'counted-log.js',
 ];
 
 const IMPORT_RE = /^\s*(?:import|export)\s[^'";]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|^\s*import\s*['"]([^'"]+)['"]/gm;
@@ -59,8 +70,11 @@ async function fetchText(file) {
   return res.text();
 }
 
+// Keyed by repo path (frontend/src/lib/queue.js, api/coach/core/streak.js).
 const files = new Map();
-const queue = [...ENTRY_MODULES];
+const rewrites = new Map(); // repo path -> [[specifier, rewritten specifier]]
+const outPath = (repoPath) => (repoPath.startsWith(LIB) ? repoPath.slice(LIB.length) : `_upstream/${repoPath}`);
+const queue = ENTRY_MODULES.map((f) => LIB + f);
 while (queue.length) {
   const file = queue.shift();
   if (files.has(file)) continue;
@@ -73,23 +87,37 @@ while (queue.length) {
   const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
   for (const m of code.matchAll(IMPORT_RE)) {
     const spec = m[1] || m[2] || m[3];
-    if (!spec.startsWith('./')) {
-      throw new Error(`${file} imports ${spec}, which is outside frontend/src/lib — not vendorable as-is`);
+    if (!spec.startsWith('./') && !spec.startsWith('../')) {
+      throw new Error(`${file} imports ${spec}, a package — not vendorable as-is`);
     }
-    const target = path.posix.normalize(spec.slice(2));
-    queue.push(path.posix.extname(target) ? target : `${target}.js`);
+    let target = path.posix.normalize(path.posix.join(path.posix.dirname(file), spec));
+    if (target.startsWith('../')) throw new Error(`${file} imports ${spec}, outside the repo`);
+    if (!path.posix.extname(target)) target += '.js';
+    let local = path.posix.relative(path.posix.dirname(outPath(file)), outPath(target));
+    if (!local.startsWith('../')) local = `./${local}`;
+    if (local !== spec) rewrites.set(file, [...(rewrites.get(file) || []), [spec, local]]);
+    queue.push(target);
   }
 }
 
 fs.rmSync(OUT_DIR, { recursive: true, force: true });
 fs.mkdirSync(OUT_DIR, { recursive: true });
-for (const [file, text] of files) {
-  fs.mkdirSync(path.dirname(path.join(OUT_DIR, file)), { recursive: true });
-  fs.writeFileSync(path.join(OUT_DIR, file), text);
+for (const [file, original] of files) {
+  let text = original;
+  for (const [from, to] of rewrites.get(file) || []) {
+    text = text.replaceAll(`'${from}'`, `'${to}'`).replaceAll(`"${from}"`, `"${to}"`);
+  }
+  const out = path.join(OUT_DIR, outPath(file));
+  fs.mkdirSync(path.dirname(out), { recursive: true });
+  fs.writeFileSync(out, text);
 }
+const rewritten = [...rewrites.keys()].map(outPath);
 fs.writeFileSync(
   path.join(OUT_DIR, 'VERSION'),
   `DuarteSantos8/openGym ${tag} — frontend/src/lib/, copied verbatim by scripts/update-opengym-vendor.mjs.\n` +
+    (rewritten.length
+      ? `Only change: imports leaving frontend/src/lib point into _upstream/, in ${rewritten.join(', ')}.\n`
+      : '') +
     'Do not edit these files by hand; re-run the script instead.\n'
 );
 console.log(`Vendored ${files.size} files from openGym ${tag} into ${path.relative(process.cwd(), OUT_DIR)}`);

@@ -53,7 +53,8 @@ export function fixtureState() {
 
 // Today's Apple Health workouts as SparkyFitness returns them: a strength
 // session from Apple's Workout app, and openGym's own copy of the logged
-// workout, which openGym writes to Apple Health with no energy or heart rate.
+// workout, which openGym wrote to Apple Health with no energy or heart rate
+// before 1.4.5.
 function fixtureExerciseEntries() {
   const today = new Date().toISOString().slice(0, 10);
   const entry = (id, minutes, kcal, bundle, hr) => ({

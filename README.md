@@ -58,6 +58,20 @@ training and nutrition data instead of you pasting it in:
   `get_muscle_volume` for this week adds each main muscle's weekly target
   range from the app's settings. An exercise merged into another in the
   app reads as the one it went into everywhere.
+- From openGym v1.4.5, the shoulder is three muscles (front, side and rear
+  delts) and the lats are their own, apart from the upper back, in
+  `get_muscle_volume`, `get_muscle_recovery` and `get_structural_balance`.
+  Those three now read the log as the app's Stats do: exercises kept out
+  of progression are kept out of them too, though a deload routine's work
+  still counts. Runs, rides and matches the app reads from Apple Health
+  (or that are logged by hand) load the recovery map (`sportThisWeek`).
+  Deload weeks of your own, with no programme running, show in
+  `get_weekly_schedule` (`deloadWeeks`, `deload` on their days) and in
+  `preview_next_session` (`deloadWeek`: fewer sets, same weight), as do
+  rows a coach or planner set for one day (`sessionTarget`). Sets logged by
+  distance (`metres`, `distanceKm`), a machine's `resistanceLevel`, the
+  `bands` a set was done with and cluster sets come through in
+  `get_recent_workouts`.
 - Across the openGym tools, volume and top sets count work sets only:
   warm-up sets are left out, drop-set drops are included, and unilateral
   sets logged per side are read one side at a time, the same as openGym's
